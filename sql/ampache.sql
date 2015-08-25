@@ -240,6 +240,68 @@ LOCK TABLES `dynamic_playlist_data` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `file_rename_log`
+--
+
+DROP TABLE IF EXISTS `file_rename_log`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `file_rename_log` (
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `date` int(11) unsigned NOT NULL,
+  `old_filename` varchar(4000) CHARACTER SET utf8 NOT NULL,
+  `new_filename` varchar(4000) CHARACTER SET utf8 NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `old_filename` (`old_filename`(333)),
+  KEY `new_filename` (`new_filename`(333))
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `file_rename_log`
+--
+
+LOCK TABLES `file_rename_log` WRITE;
+/*!40000 ALTER TABLE `file_rename_log` DISABLE KEYS */;
+/*!40000 ALTER TABLE `file_rename_log` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Structure for view `file_rename_log_v`
+--
+
+DROP VIEW IF EXISTS `file_rename_log_v`;
+CREATE VIEW `file_rename_log_v` AS
+    select `a`.`old_filename` AS `old_filename`,`b`.`new_filename` AS `new_filename` from
+      `file_rename_log` a
+  union all
+    select `a`.`old_filename` AS `old_filename`,`b`.`new_filename` AS `new_filename` from (
+      `file_rename_log` `a` join `file_rename_log` `b`
+    ) where (
+      `a`.`new_filename` = `b`.`old_filename`
+    )
+  union all
+    select `a`.`old_filename` AS `old_filename`,`c`.`new_filename` AS `new_filename` from (
+      (`file_rename_log` `a` join `file_rename_log` `b`) join `file_rename_log` `c`
+    ) where (
+      (`a`.`new_filename` = `b`.`old_filename`) and (`b`.`new_filename` = `c`.`old_filename`)
+    )
+  union all
+    select `a`.`old_filename` AS `old_filename`,`d`.`new_filename` AS `new_filename` from (
+      ((`file_rename_log` `a` join `file_rename_log` `b`) join `file_rename_log` `c`) join `file_rename_log` `d`
+    ) where (
+      (`a`.`new_filename` = `b`.`old_filename`) and (`b`.`new_filename` = `c`.`old_filename`) and (`c`.`new_filename` = `d`.`old_filename`)
+    )
+  union all
+    select `a`.`old_filename` AS `old_filename`,`e`.`new_filename` AS `new_filename` from (
+      (((`file_rename_log` `a` join `file_rename_log` `b`) join `file_rename_log` `c`) join `file_rename_log` `d`) join `file_rename_log` `e`
+    ) where (
+      (`a`.`new_filename` = `b`.`old_filename`) and (`b`.`new_filename` = `c`.`old_filename`) and (`c`.`new_filename` = `d`.`old_filename`) and (`d`.`new_filename` = `e`.`old_filename`)
+    );
+
+--
 -- Table structure for table `image`
 --
 

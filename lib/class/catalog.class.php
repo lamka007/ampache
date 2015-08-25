@@ -1195,17 +1195,26 @@ abstract class Catalog extends database_object
                     if (isset($results['id'])) {
                         $songs[] = $results['id'];
                     } else {
-                        // Not found in absolute path, create it from relative path
-                        $file = $pinfo['dirname'] . DIRECTORY_SEPARATOR . $file;
-                        // Normalize the file path. realpath requires the files to exists.
-                        $file = realpath($file);
-                        if ($file) {
-                            $sql = "SELECT `id` FROM `song` WHERE `file` = ?";
-                            $db_results = Dba::read($sql, array($file));
-                            $results = Dba::fetch_assoc($db_results);
+                        // Search for this file in file_rename_log_v
+                        $sql = "SELECT b.`id` FROM `file_rename_log_v` a, `song` b WHERE a.`old_filename` LIKE '%" . Dba::escape($file) . "' and a.`new_filename` =  b.`file`";
+                        debug_event('catalog', 'Look for playlist file: ' . $sql, '5');
+                        $db_results = Dba::read($sql);
+                        $results = Dba::fetch_assoc($db_results);
+                        if (isset($results['id'])) {
+                            $songs[] = $results['id'];
+                        } else {
+                            // Not found in absolute path, create it from relative path
+                            $file = $pinfo['dirname'] . DIRECTORY_SEPARATOR . $file;
+                            // Normalize the file path. realpath requires the files to exists.
+                            $file = realpath($file);
+                            if ($file) {
+                                $sql = "SELECT `id` FROM `song` WHERE `file` = ?";
+                                $db_results = Dba::read($sql, array($file));
+                                $results = Dba::fetch_assoc($db_results);
 
-                            if (isset($results['id'])) {
-                                $songs[] = $results['id'];
+                                if (isset($results['id'])) {
+                                    $songs[] = $results['id'];
+                                }
                             }
                         }
                     }

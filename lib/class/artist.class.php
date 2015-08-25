@@ -345,34 +345,55 @@ class Artist extends database_object
      *
      * Checks for an existing artist; if none exists, insert one.
      */
-    public static function check($name, $mbid = null, $readonly = false)
+    public static function check($name, $mbids = null, $readonly = false)
     {
         $trimmed = Catalog::trim_prefix(trim($name));
         $name = $trimmed['string'];
         $prefix = $trimmed['prefix'];
 
-        if ($mbid == '') $mbid = null;
+        if ($mbids == '') $mbids = null;
 
         if (!$name) {
             $name = T_('Unknown (Orphaned)');
             $prefix = null;
         }
 
-        if (isset(self::$_mapcache[$name][$mbid])) {
-            return self::$_mapcache[$name][$mbid];
+        // split multiple artist to array
+        if ($mbids) {
+            $mbid_array = explode("\x00", $mbids);
+        }
+
+        if ($mbids) {
+            foreach ($mbid_array as $mbid_tmp) {
+                if (isset(self::$_mapcache[$name][$mbid_tmp])) {
+                    return self::$_mapcache[$name][$mbid_tmp];
+                }
+            }
+        } else {
+            if (isset(self::$_mapcache[$name][$mbids])) {
+                return self::$_mapcache[$name][$mbids];
+            }
         }
 
         $id = 0;
         $exists = false;
 
-        if ($mbid) {
-            $sql = 'SELECT `id` FROM `artist` WHERE `mbid` = ?';
-            $db_results = Dba::read($sql, array($mbid));
+        if ($mbids) {
+            foreach ($mbid_array as $mbid_tmp) {
+                $sql = 'SELECT `id` FROM `artist` WHERE `name` LIKE ? AND `mbid` = ?';
+                $db_results = Dba::read($sql, array($name, $mbid_tmp));
 
-            if ($row = Dba::fetch_assoc($db_results)) {
-                $id = $row['id'];
-                $exists = true;
+                if ($row = Dba::fetch_assoc($db_results)) {
+                    $id = $row['id'];
+                    $exists = true;
+                    break;
+                }
             }
+
+            // for multiple artist use just first artist
+            $mbid = $mbid_array[0];
+        } else {
+            $mbid = null;
         }
 
         if (!$exists) {

@@ -1062,7 +1062,7 @@ class Query
         $final_sql = $sql . $join_sql . $filter_sql . $having_sql;
 
         if ( $this->get_type() == 'artist' && !$this->_state['custom'] ) {
-             $final_sql .= " GROUP BY `" . $this->get_type() . "`.`name` ";
+             $final_sql .= " GROUP BY `" . $this->get_type() . "`.`name`, `" . $this->get_type() . "`.`mbid` ";
         }
         $final_sql .= $order_sql . $limit_sql;
 

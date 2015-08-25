@@ -527,15 +527,7 @@ class Catalog_local extends Catalog
                 UI::update_text('verify_dir_' . $this->id, scrub_out($file));
             }
 
-            if (!Core::is_readable(Core::conv_lc_file($row['file']))) {
-                Error::add('general', sprintf(T_('%s does not exist or is not readable'), $row['file']));
-                debug_event('read', $row['file'] . ' does not exist or is not readable', 5);
-                continue;
-            }
-
-            $media = new $media_type($row['id']);
-
-            $info = self::update_media_from_tags($media, $this->sort_pattern,$this->rename_pattern);
+            $info = $this->_verify_file($media_type, $row['id'], $row['file']);
             if ($info['change']) {
                 $changed++;
             }
@@ -545,7 +537,25 @@ class Catalog_local extends Catalog
         UI::update_text('verify_count_' . $this->id, $count);
         return $changed;
 
-    } // _verify_chunk
+    } // _verfiy_chunk
+
+
+    /**
+     * _verify_file
+     * This verifies a one file in catalog
+     */
+    private function _verify_file($media_type, $id, $file)
+    {
+        if (!Core::is_readable(Core::conv_lc_file($file))) {
+            Error::add('general', sprintf(T_('%s does not exist or is not readable'), $file));
+            debug_event('read', $file . ' does not exist or is not readable', 5);
+            return;
+        }
+
+        $media = new $media_type($id);
+
+        return self::update_media_from_tags($media, $this->sort_pattern,$this->rename_pattern);
+    } // _verify_file
 
     /**
      * clean catalog procedure
@@ -620,11 +630,26 @@ class Catalog_local extends Catalog
             $file_info = filesize($results['file']);
             if (!file_exists($results['file']) || $file_info < 1) {
                 debug_event('clean', 'File not found or empty: ' . $results['file'], 5);
-                Error::add('general', sprintf(T_('Error File Not Found or 0 Bytes: %s'), $results['file']));
 
+                // Check for file in file_rename_log
+                $sql = "SELECT `new_filename` FROM `file_rename_log_v` WHERE `old_filename` = ?";
+                $db_log_results = Dba::read($sql, array($results['file']));
+                $log_results = Dba::fetch_assoc($db_log_results);
 
-                // Store it in an array we'll delete it later...
-                $dead[] = $results['id'];
+                if (isset($log_results['new_filename'])) {
+                    debug_event('clean', 'For id ' . $results['id'] . ' updating file from ' . $results['file'] . ' to ' . $log_results['new_filename'] . '.', 1);
+
+                    // update 
+                    $sql = "UPDATE `$media_type` SET `file`= ? WHERE `id`= ?";
+                    $db_log_results = Dba::write($sql, array($log_results['new_filename'], $results['id']));
+                    $this->_verify_file($media_type, $results['id'], $log_results['new_filename']);
+                } else {
+                    debug_event('clean', 'Error File Not Found or 0 Bytes: ' . $results['file'] . '.', 1);
+                    Error::add('general', sprintf(T_('Error File Not Found or 0 Bytes: %s'), $results['file']));
+
+                    // Store it in an array we'll delete it later...
+                    $dead[] = $results['id'];
+                } //if found file
 
             } //if error
             else if (!Core::is_readable(Core::conv_lc_file($results['file']))) {
